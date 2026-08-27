@@ -113,7 +113,7 @@ const SECRET_KEY = 'VillaDonTomas-Dani';
 
 // Clave de acceso para poder VER el resultado de la verificación.
 // Cambiala por la que quieras vos (no tiene que coincidir con SECRET_KEY).
-const ACCESS_PIN = 'logan';
+const ACCESS_PIN = 'DonTomas2026';
 
 function fnv1aHash(str){
   let hash = 0x811c9dc5;
@@ -156,6 +156,7 @@ function runVerification(){
   const checkout = params.get('checkout') || '';
   const personas = params.get('personas') || '';
   const total = params.get('total') || '';
+  const b = params.get('b') || '';
   const hashFromUrl = (params.get('h') || '').toUpperCase();
 
   const content = document.getElementById('content');
@@ -168,11 +169,26 @@ function runVerification(){
     return;
   }
 
-  const raw = `${cot}|${checkin}|${checkout}|${personas}|${Number(total).toFixed(2)}|${SECRET_KEY}`;
+  const raw = `${cot}|${checkin}|${checkout}|${personas}|${Number(total).toFixed(2)}|${b}|${SECRET_KEY}`;
   const expectedHash = fnv1aHash(raw);
   const isValid = expectedHash === hashFromUrl;
 
   if (isValid) {
+    // Desglose de presupuestos (si hay más de uno): "Presupuesto 1:345.00,Presupuesto 2:512.50"
+    let budgetsHtml = '';
+    if (b) {
+      const rows = b.split(',').map(item => {
+        const idx = item.lastIndexOf(':');
+        if (idx === -1) return null;
+        const label = item.slice(0, idx);
+        const amount = item.slice(idx + 1);
+        return `<tr><td class="label">${label}</td><td class="value">USD ${amount}</td></tr>`;
+      }).filter(Boolean);
+      if (rows.length > 1) {
+        budgetsHtml = rows.join('');
+      }
+    }
+
     content.innerHTML = `
       <div class="status ok">✓ Cotización válida</div>
       <table>
@@ -180,7 +196,8 @@ function runVerification(){
         <tr><td class="label">Check-in</td><td class="value">${fmtDate(checkin)}</td></tr>
         <tr><td class="label">Check-out</td><td class="value">${fmtDate(checkout)}</td></tr>
         <tr><td class="label">Personas</td><td class="value">${personas || '—'}</td></tr>
-        <tr><td class="label">Total</td><td class="value">USD ${total || '—'}</td></tr>
+        ${budgetsHtml}
+        <tr><td class="label">Total ${budgetsHtml ? '(todas las alternativas)' : ''}</td><td class="value">USD ${total || '—'}</td></tr>
       </table>
       <div class="foot">
         Estos datos coinciden exactamente con los que emitió el hotel para esta cotización.
