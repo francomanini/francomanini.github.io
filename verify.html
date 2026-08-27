@@ -57,10 +57,48 @@
   td.label{ color:#8a8574; width: 42%; font-size: 11.5px; text-transform: uppercase; letter-spacing:.04em; }
   td.value{ font-weight: 700; text-align: right; }
   .foot{ padding: 16px 22px; font-size: 11px; color:#8a8574; text-align:center; line-height:1.5; }
+
+  /* Pantalla de clave */
+  .lock-body{ padding: 26px 22px; }
+  .lock-body label{
+    display:block; font-size:11.5px; color:#8a8574; text-transform:uppercase;
+    letter-spacing:.05em; margin-bottom:8px; font-weight:600;
+  }
+  .lock-body input{
+    width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:6px;
+    font-size:16px; margin-bottom:12px; box-sizing:border-box; letter-spacing:.15em; text-align:center;
+  }
+  .lock-body input:focus{ outline:2px solid var(--brass); border-color:var(--brass); }
+  .lock-btn{
+    width:100%; padding:13px; background:var(--ink); color:#fff; border:none;
+    border-radius:6px; font-weight:700; font-size:14px; cursor:pointer;
+  }
+  .lock-btn:hover{ background:#0a1530; }
+  .lock-error{
+    color:#a8462f; font-size:12.5px; margin-top:10px; text-align:center; display:none; font-weight:600;
+  }
+  .lock-icon{ text-align:center; font-size:32px; margin-bottom:6px; }
 </style>
 </head>
 <body>
-  <div class="card">
+
+  <!-- Pantalla de clave -->
+  <div class="card" id="lockCard">
+    <div class="head">
+      <h1>Apart Hotel Villa Don Tomás</h1>
+      <p>Verificación de cotización</p>
+    </div>
+    <div class="lock-body">
+      <div class="lock-icon">🔒</div>
+      <label for="pinInput">Ingresá la clave de acceso</label>
+      <input id="pinInput" type="password" inputmode="text" placeholder="••••••" autocomplete="off">
+      <button class="lock-btn" onclick="checkPin()">Ver verificación</button>
+      <div class="lock-error" id="pinError">Clave incorrecta. Probá de nuevo.</div>
+    </div>
+  </div>
+
+  <!-- Resultado (oculto hasta ingresar la clave) -->
+  <div class="card" id="resultCard" style="display:none;">
     <div class="head">
       <h1>Apart Hotel Villa Don Tomás</h1>
       <p>Verificación de cotización</p>
@@ -72,6 +110,10 @@
 // IMPORTANTE: esta clave tiene que ser EXACTAMENTE la misma que la variable
 // SECRET_KEY del archivo cotizador-hotelero.html. Si cambiás una, cambiá la otra.
 const SECRET_KEY = 'VillaDonTomas-Dani';
+
+// Clave de acceso para poder VER el resultado de la verificación.
+// Cambiala por la que quieras vos (no tiene que coincidir con SECRET_KEY).
+const ACCESS_PIN = 'DonTomas2026';
 
 function fnv1aHash(str){
   let hash = 0x811c9dc5;
@@ -88,22 +130,44 @@ function fmtDate(iso){
   return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : iso;
 }
 
-const params = new URLSearchParams(window.location.search);
-const cot = params.get('cot') || '';
-const checkin = params.get('checkin') || '';
-const checkout = params.get('checkout') || '';
-const personas = params.get('personas') || '';
-const total = params.get('total') || '';
-const hashFromUrl = (params.get('h') || '').toUpperCase();
+function checkPin(){
+  const val = document.getElementById('pinInput').value;
+  const errorEl = document.getElementById('pinError');
+  if (val === ACCESS_PIN) {
+    document.getElementById('lockCard').style.display = 'none';
+    document.getElementById('resultCard').style.display = 'block';
+    sessionStorage.setItem('vdt_verify_unlocked', '1');
+    runVerification();
+  } else {
+    errorEl.style.display = 'block';
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+  }
+}
 
-const content = document.getElementById('content');
+document.getElementById('pinInput').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') checkPin();
+});
 
-if (!cot || !hashFromUrl) {
-  content.innerHTML = `
-    <div class="status bad">✕ Código incompleto</div>
-    <div class="foot">Este enlace no tiene toda la información necesaria para verificar la cotización. Escaneá el QR directamente desde el PDF.</div>
-  `;
-} else {
+function runVerification(){
+  const params = new URLSearchParams(window.location.search);
+  const cot = params.get('cot') || '';
+  const checkin = params.get('checkin') || '';
+  const checkout = params.get('checkout') || '';
+  const personas = params.get('personas') || '';
+  const total = params.get('total') || '';
+  const hashFromUrl = (params.get('h') || '').toUpperCase();
+
+  const content = document.getElementById('content');
+
+  if (!cot || !hashFromUrl) {
+    content.innerHTML = `
+      <div class="status bad">✕ Código incompleto</div>
+      <div class="foot">Este enlace no tiene toda la información necesaria para verificar la cotización. Escaneá el QR directamente desde el PDF.</div>
+    `;
+    return;
+  }
+
   const raw = `${cot}|${checkin}|${checkout}|${personas}|${Number(total).toFixed(2)}|${SECRET_KEY}`;
   const expectedHash = fnv1aHash(raw);
   const isValid = expectedHash === hashFromUrl;
@@ -134,6 +198,14 @@ if (!cot || !hashFromUrl) {
     `;
   }
 }
+
+// Si ya se desbloqueó antes en esta misma sesión del navegador, no pide la clave de nuevo.
+if (sessionStorage.getItem('vdt_verify_unlocked') === '1') {
+  document.getElementById('lockCard').style.display = 'none';
+  document.getElementById('resultCard').style.display = 'block';
+  runVerification();
+}
 </script>
 </body>
 </html>
+
