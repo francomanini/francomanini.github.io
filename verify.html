@@ -90,8 +90,6 @@ function fmtDate(iso){
 
 const params = new URLSearchParams(window.location.search);
 const cot = params.get('cot') || '';
-const grupo = params.get('grupo') || '';
-const cliente = params.get('cliente') || '';
 const checkin = params.get('checkin') || '';
 const checkout = params.get('checkout') || '';
 const personas = params.get('personas') || '';
@@ -115,16 +113,14 @@ if (!cot || !hashFromUrl) {
       <div class="status ok">✓ Cotización válida</div>
       <table>
         <tr><td class="label">N° de cotización</td><td class="value">${cot}</td></tr>
-        ${grupo ? `<tr><td class="label">Grupo / Evento</td><td class="value">${grupo}</td></tr>` : ''}
-        <tr><td class="label">Cliente</td><td class="value">${cliente || '—'}</td></tr>
         <tr><td class="label">Check-in</td><td class="value">${fmtDate(checkin)}</td></tr>
         <tr><td class="label">Check-out</td><td class="value">${fmtDate(checkout)}</td></tr>
         <tr><td class="label">Personas</td><td class="value">${personas || '—'}</td></tr>
-        <tr><td class="label">Total</td><td class="value">US$ ${total || '—'}</td></tr>
+        <tr><td class="label">Total</td><td class="value">USD ${total || '—'}</td></tr>
       </table>
       <div class="foot">
         Estos datos coinciden exactamente con los que emitió el hotel para esta cotización.
-        Si el PDF impreso muestra un total, fechas o cliente distintos a los de aquí, puede haber sido alterado.
+        Si el PDF impreso muestra un total, fechas o cantidad de personas distintos a los de aquí, puede haber sido alterado.
       </div>
     `;
   } else {
